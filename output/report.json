@@ -1,0 +1,159 @@
+{
+  "generatedAt": "2026-08-03T00:08:20.743Z",
+  "appliedFilter": null,
+  "summary": {
+    "total": 12,
+    "active": 10,
+    "inactive": 2,
+    "averagePrice": 1264.17,
+    "mostExpensive": {
+      "id": "eq002",
+      "name": "Pioneer DJM-A9 4-Channel Mixer",
+      "category": "dj-gear",
+      "price": 2699,
+      "stock": 2,
+      "active": true,
+      "brand": "Pioneer DJ",
+      "powerWatts": 54
+    },
+    "cheapest": {
+      "id": "eq006",
+      "name": "ADJ Element Hex IP Par LED",
+      "category": "iluminacion",
+      "price": 329,
+      "stock": 12,
+      "active": true,
+      "brand": "ADJ",
+      "powerWatts": 60
+    },
+    "categories": [
+      "dj-gear",
+      "sonido",
+      "iluminacion",
+      "microfonos",
+      "efectos"
+    ]
+  },
+  "items": [
+    {
+      "id": "eq001",
+      "name": "Pioneer CDJ-3000 Multi Player",
+      "category": "dj-gear",
+      "price": 2599,
+      "stock": 4,
+      "active": true,
+      "brand": "Pioneer DJ",
+      "powerWatts": 40
+    },
+    {
+      "id": "eq002",
+      "name": "Pioneer DJM-A9 4-Channel Mixer",
+      "category": "dj-gear",
+      "price": 2699,
+      "stock": 2,
+      "active": true,
+      "brand": "Pioneer DJ",
+      "powerWatts": 54
+    },
+    {
+      "id": "eq003",
+      "name": "JBL PRX915 Active 15\" Speaker",
+      "category": "sonido",
+      "price": 1099,
+      "stock": 8,
+      "active": true,
+      "brand": "JBL",
+      "powerWatts": 2000
+    },
+    {
+      "id": "eq004",
+      "name": "QSC KW181 Active Subwoofer 18\"",
+      "category": "sonido",
+      "price": 1799,
+      "stock": 4,
+      "active": true,
+      "brand": "QSC",
+      "powerWatts": 1000
+    },
+    {
+      "id": "eq005",
+      "name": "Chauvet DJ Intimidator Spot 360",
+      "category": "iluminacion",
+      "price": 949.99,
+      "stock": 6,
+      "active": true,
+      "brand": "Chauvet DJ",
+      "powerWatts": 150
+    },
+    {
+      "id": "eq006",
+      "name": "ADJ Element Hex IP Par LED",
+      "category": "iluminacion",
+      "price": 329,
+      "stock": 12,
+      "active": true,
+      "brand": "ADJ",
+      "powerWatts": 60
+    },
+    {
+      "id": "eq007",
+      "name": "Shure BLX24/SM58 Wireless Mic",
+      "category": "microfonos",
+      "price": 349,
+      "stock": 5,
+      "active": true,
+      "brand": "Shure",
+      "powerWatts": 10
+    },
+    {
+      "id": "eq008",
+      "name": "Sennheiser EW-D SKM-S Wireless Set",
+      "category": "microfonos",
+      "price": 699,
+      "stock": 3,
+      "active": true,
+      "brand": "Sennheiser",
+      "powerWatts": 15
+    },
+    {
+      "id": "eq009",
+      "name": "Antari Z-1500 II Fog Machine",
+      "category": "efectos",
+      "price": 799,
+      "stock": 2,
+      "active": true,
+      "brand": "Antari",
+      "powerWatts": 1500
+    },
+    {
+      "id": "eq010",
+      "name": "Look Solutions Unique 2.1 Hazer",
+      "category": "efectos",
+      "price": 1450,
+      "stock": 0,
+      "active": false,
+      "brand": "Look Solutions",
+      "powerWatts": 1500
+    },
+    {
+      "id": "eq011",
+      "name": "Denon DJ Prime 4 Standalone",
+      "category": "dj-gear",
+      "price": 1899,
+      "stock": 0,
+      "active": false,
+      "brand": "Denon DJ",
+      "powerWatts": 45
+    },
+    {
+      "id": "eq012",
+      "name": "Electro-Voice ZLX-12BT Speaker",
+      "category": "sonido",
+      "price": 499,
+      "stock": 10,
+      "active": true,
+      "brand": "Electro-Voice",
+      "powerWatts": 1000
+    }
+  ]
+}
