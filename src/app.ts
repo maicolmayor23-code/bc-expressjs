@@ -49,7 +49,7 @@ export function createApp(): Application {
 
   // 5. Handler para rutas no encontradas (404)
   app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Route not found' });
+    res.status(404).json({ error: 'Not Found', message: 'Route not found' });
   });
 
   // 6. Error handler global — SIEMPRE el último app.use() con 4 parámetros

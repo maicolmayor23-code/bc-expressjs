@@ -1,7 +1,7 @@
 {
-  "name": "proyecto-semana-02",
+  "name": "proyecto-semana-03",
   "version": "1.0.0",
-  "description": "Week 02 — Project: Express CRUD API with in-memory store",
+  "description": "Week 03 — Project: Express REST API with Layered Architecture (DJ / Sonido y Luces)",
   "main": "dist/server.js",
   "engines": {
     "node": ">=22.0.0"

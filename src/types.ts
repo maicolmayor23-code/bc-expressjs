@@ -1,6 +1,6 @@
 // ============================================
-// TYPES: Interfaz del recurso principal (Equipment)
-// Dominio: DJ / Sonido y Luces
+// TYPES: Entidad, DTOs y Contratos de Respuesta API
+// Dominio: DJ / Sonido y Luces (equipment)
 // ============================================
 
 export type EquipmentCategory = 'sound' | 'lights' | 'dj_gear' | 'effects';
@@ -11,10 +11,38 @@ export interface Equipment {
   category: EquipmentCategory;
   dailyRate: number;
   isAvailable: boolean;
+  createdAt: string;
 }
 
-// DTO usado para crear un nuevo equipo (sin id, se genera automáticamente)
-export type CreateEquipmentDto = Omit<Equipment, 'id'>;
+// DTO para crear nuevo equipo (omite campos autogenerados)
+export type CreateEquipmentDto = Omit<Equipment, 'id' | 'createdAt'>;
 
-// DTO para actualización (todos los campos editables)
+// DTO para actualización (campos opcionales)
 export type UpdateEquipmentDto = Partial<CreateEquipmentDto>;
+
+// Parámetros de paginación
+export interface PaginationParams {
+  page: number;
+  limit: number;
+}
+
+// ============================================
+// CONTRATOS DE RESPUESTA HTTP ESTÁNDAR
+// ============================================
+
+export interface SingleResponse<T> {
+  data: T;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ErrorResponse {
+  error: string;
+  message: string;
+  details?: Array<{ field: string; message: string }>;
+}
