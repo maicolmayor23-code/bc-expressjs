@@ -151,4 +151,4 @@ src/
 4. **Iniciar en producción**:
    ```bash
    NODE_ENV=production pnpm start
-   ```
+   ``` 
