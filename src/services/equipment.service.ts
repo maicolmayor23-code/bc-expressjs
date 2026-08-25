@@ -1,16 +1,17 @@
 import * as equipmentRepository from '../repositories/equipment.repository.js';
+import { AppError } from '../errors/AppError.js';
 import type {
   Equipment,
   CreateEquipmentDto,
   UpdateEquipmentDto,
-  PaginationParams,
   PaginatedResponse,
 } from '../types.js';
+import type { QueryPagination } from '../schemas/equipment.schema.js';
 
 /**
- * Obtiene el listado de equipos paginado
+ * Obtiene el listado paginado de equipos
  */
-export async function findAll(params: PaginationParams): Promise<PaginatedResponse<Equipment>> {
+export async function findAll(params: QueryPagination): Promise<PaginatedResponse<Equipment>> {
   const allEquipment = await equipmentRepository.findAll();
   const total = allEquipment.length;
 
@@ -29,48 +30,55 @@ export async function findAll(params: PaginationParams): Promise<PaginatedRespon
 }
 
 /**
- * Obtiene un equipo por su ID
+ * Obtiene un equipo por su ID o lanza AppError(404) si no existe
  */
-export async function findById(id: number): Promise<Equipment | undefined> {
-  return equipmentRepository.findById(id);
+export async function findById(id: number): Promise<Equipment> {
+  const equipment = await equipmentRepository.findById(id);
+  if (!equipment) {
+    throw new AppError(404, `Equipment with ID ${id} not found`);
+  }
+  return equipment;
 }
 
 /**
- * Crea un nuevo equipo verificando reglas de negocio
+ * Crea un nuevo equipo aplicando reglas de negocio de dominio
  */
 export async function create(dto: CreateEquipmentDto): Promise<Equipment> {
-  // Regla de negocio: tarifa diaria mínima de 0
-  if (dto.dailyRate < 0) {
-    throw new Error('Daily rate cannot be negative');
+  if (dto.dailyRate <= 0) {
+    throw new AppError(400, 'Daily rate must be greater than 0');
   }
 
   return equipmentRepository.create(dto);
 }
 
 /**
- * Actualiza un equipo existente
+ * Actualiza un equipo existente por ID o lanza AppError(404) si no existe
  */
-export async function update(id: number, dto: UpdateEquipmentDto): Promise<Equipment | undefined> {
-  const existing = await equipmentRepository.findById(id);
-  if (!existing) {
-    return undefined;
+export async function update(id: number, dto: UpdateEquipmentDto): Promise<Equipment> {
+  // Verificar existencia previa
+  await findById(id);
+
+  if (dto.dailyRate !== undefined && dto.dailyRate <= 0) {
+    throw new AppError(400, 'Daily rate must be greater than 0');
   }
 
-  if (dto.dailyRate !== undefined && dto.dailyRate < 0) {
-    throw new Error('Daily rate cannot be negative');
+  const updated = await equipmentRepository.update(id, dto);
+  if (!updated) {
+    throw new AppError(404, `Equipment with ID ${id} not found`);
   }
 
-  return equipmentRepository.update(id, dto);
+  return updated;
 }
 
 /**
- * Elimina un equipo por ID
+ * Elimina un equipo por ID o lanza AppError(404) si no existe
  */
-export async function remove(id: number): Promise<boolean> {
-  const existing = await equipmentRepository.findById(id);
-  if (!existing) {
-    return false;
-  }
+export async function remove(id: number): Promise<void> {
+  // Verificar existencia previa
+  await findById(id);
 
-  return equipmentRepository.remove(id);
+  const deleted = await equipmentRepository.remove(id);
+  if (!deleted) {
+    throw new AppError(404, `Equipment with ID ${id} not found`);
+  }
 }

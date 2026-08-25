@@ -1,9 +1,11 @@
-// ============================================
-// TYPES: Entidad, DTOs y Contratos de Respuesta API
-// Dominio: DJ / Sonido y Luces (equipment)
-// ============================================
+import type { z } from 'zod';
+import type {
+  equipmentCategorySchema,
+  CreateEquipmentDto,
+  UpdateEquipmentDto,
+} from './schemas/equipment.schema.js';
 
-export type EquipmentCategory = 'sound' | 'lights' | 'dj_gear' | 'effects';
+export type EquipmentCategory = z.infer<typeof equipmentCategorySchema>;
 
 export interface Equipment {
   id: number;
@@ -14,21 +16,7 @@ export interface Equipment {
   createdAt: string;
 }
 
-// DTO para crear nuevo equipo (omite campos autogenerados)
-export type CreateEquipmentDto = Omit<Equipment, 'id' | 'createdAt'>;
-
-// DTO para actualización (campos opcionales)
-export type UpdateEquipmentDto = Partial<CreateEquipmentDto>;
-
-// Parámetros de paginación
-export interface PaginationParams {
-  page: number;
-  limit: number;
-}
-
-// ============================================
-// CONTRATOS DE RESPUESTA HTTP ESTÁNDAR
-// ============================================
+export type { CreateEquipmentDto, UpdateEquipmentDto };
 
 export interface SingleResponse<T> {
   data: T;
@@ -41,8 +29,13 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
+export interface ErrorIssue {
+  field: string;
+  message: string;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;
-  details?: Array<{ field: string; message: string }>;
+  issues?: ErrorIssue[];
 }

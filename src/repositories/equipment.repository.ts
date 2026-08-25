@@ -1,6 +1,6 @@
 import type { Equipment, CreateEquipmentDto, UpdateEquipmentDto } from '../types.js';
 
-// Store en memoria — simula el acceso a base de datos de equipos DJ / Sonido y Luces
+// Base de datos en memoria para el dominio DJ / Sonido y Luces
 const items: Equipment[] = [
   {
     id: 1,
@@ -59,7 +59,10 @@ export async function findById(id: number): Promise<Equipment | undefined> {
 export async function create(dto: CreateEquipmentDto): Promise<Equipment> {
   const newItem: Equipment = {
     id: nextId++,
-    ...dto,
+    name: dto.name,
+    category: dto.category,
+    dailyRate: dto.dailyRate,
+    isAvailable: dto.isAvailable ?? true,
     createdAt: new Date().toISOString(),
   };
   items.push(newItem);
@@ -79,7 +82,7 @@ export async function update(id: number, dto: UpdateEquipmentDto): Promise<Equip
   const updatedItem: Equipment = {
     ...existingItem,
     ...dto,
-    id: existingItem.id, // El ID se preserva inmuta
+    id: existingItem.id, // El ID se preserva inmutable
   };
 
   items[index] = updatedItem;

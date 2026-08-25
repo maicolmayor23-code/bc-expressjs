@@ -1,40 +1,31 @@
 import express from 'express';
-import type { Application, Request, Response, NextFunction } from 'express';
+import type { Application, Request, Response } from 'express';
 import { equipmentRouter } from './routes/equipment.routes.js';
+import { morganMiddleware } from './config/logger.js';
+import { notFoundHandler } from './middlewares/notFound.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 export function createApp(): Application {
   const app = express();
 
-  // 1. express.json() — Parseo de body JSON (requerido para POST/PUT)
+  // 1. Parser JSON para bodies de peticiones
   app.use(express.json());
 
-  // 2. Logger personalizado — Registra método, URL, status y tiempo transcurrido
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const start = Date.now();
-    const { method, url } = req;
+  // 2. Logging de peticiones HTTP con Morgan dirigido a Winston
+  app.use(morganMiddleware);
 
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      const statusCode = res.statusCode;
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] ${method} ${url} ${statusCode} - ${duration}ms`);
-    });
-
-    next();
-  });
-
-  // Ruta raíz de bienvenida
+  // 3. Ruta raíz de bienvenida y health check
   app.get('/', (_req: Request, res: Response) => {
     res.json({
-      message: '🎧 Bienvenid@ a la API de DJ / Sonido y Luces',
+      message: '🎧 API de Equipos — DJ / Sonido y Luces (Semana 04)',
       endpoints: {
         health: '/health',
         equipment: '/api/v1/equipment',
+        itemsAlias: '/api/v1/items',
       },
     });
   });
 
-  // 3. Health check (endpoint de verificación del estado del servidor)
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
@@ -43,23 +34,15 @@ export function createApp(): Application {
     });
   });
 
-  // 4. Rutas del recurso principal de equipos
+  // 4. Montar recurso principal y alias de compatibilidad
   app.use('/api/v1/equipment', equipmentRouter);
-  app.use('/api/v1/items', equipmentRouter); // Alias para compatibilidad con la especificación
+  app.use('/api/v1/items', equipmentRouter);
 
-  // 5. Handler para rutas no encontradas (404)
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not Found', message: 'Route not found' });
-  });
+  // 5. Middleware 404 para rutas inexistentes (responde JSON)
+  app.use(notFoundHandler);
 
-  // 6. Error handler global — SIEMPRE el último app.use() con 4 parámetros
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('Unhandled Server Error:', err);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined,
-    });
-  });
+  // 6. Middleware global de manejo de errores (4 parámetros)
+  app.use(errorHandler);
 
   return app;
 }
