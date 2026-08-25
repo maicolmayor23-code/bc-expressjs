@@ -100,8 +100,8 @@ src/
 ├── controllers/
 │   └── equipment.controller.ts # Thin controllers con safeParse() y next(err)
 ├── routes/
-│   ├── equipment.routes.ts    # 5 endpoints CRUD
-│   └── items.routes.ts        # Re-exportación para alias
+│   └── equipment.routes.ts    # 5 endpoints CRUD
+│   
 ├── types.ts               # Interfaces globales y contratos de respuesta
 ├── app.ts                 # Configuración de Express, middlewares y rutas
 └── server.ts              # Bootstrap del servidor y graceful shutdown
