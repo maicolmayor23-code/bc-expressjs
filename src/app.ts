@@ -17,7 +17,7 @@ export function createApp(): Application {
   // 3. Ruta raíz de bienvenida y health check
   app.get('/', (_req: Request, res: Response) => {
     res.json({
-      message: '🎧 API de Equipos — DJ / Sonido y Luces (Semana 04)',
+      message: '🎧 API de Equipos — DJ / Sonido y Luces (Semana 05 - PostgreSQL + Prisma ORM)',
       endpoints: {
         health: '/health',
         equipment: '/api/v1/equipment',
@@ -29,7 +29,7 @@ export function createApp(): Application {
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      service: 'DJ Sound & Lights API',
+      service: 'DJ Sound & Lights API (PostgreSQL + Prisma)',
       timestamp: new Date().toISOString(),
     });
   });

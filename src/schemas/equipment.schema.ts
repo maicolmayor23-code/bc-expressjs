@@ -1,32 +1,32 @@
 import { z } from 'zod';
 
-// Enum exacto de categorías para el dominio DJ / Sonido y Luces
-export const equipmentCategorySchema = z.enum(['sound', 'lights', 'dj_gear', 'effects'], {
-  message: 'La categoría debe ser una de: sound, lights, dj_gear, effects',
-});
-
-// Schema de creación
+// Schema de creación de equipo
 export const createEquipmentSchema = z.object({
   name: z
     .string({ message: 'El nombre debe ser un texto' })
     .min(1, 'El nombre no puede estar vacío')
     .trim(),
-  category: equipmentCategorySchema,
+  serialNumber: z
+    .string({ message: 'El número de serie debe ser un texto' })
+    .min(1, 'El número de serie no puede estar vacío')
+    .trim(),
   dailyRate: z
     .number({ message: 'La tarifa diaria debe ser un número' })
     .positive('La tarifa diaria debe ser mayor a 0'),
   isAvailable: z.boolean().default(true),
+  categoryId: z
+    .string({ message: 'El ID de la categoría es requerido' })
+    .uuid('El ID de la categoría debe ser un UUID válido'),
 });
 
 // Schema de actualización (reutiliza .partial())
 export const updateEquipmentSchema = createEquipmentSchema.partial();
 
-// Schema para validación de parámetro ID en rutas
+// Schema para validación de parámetro ID en rutas (Estricto UUID para Semana 05)
 export const equipmentIdParamSchema = z.object({
-  id: z.coerce
-    .number({ message: 'El ID debe ser un número' })
-    .int('El ID debe ser un número entero')
-    .positive('El ID debe ser un número positivo'),
+  id: z
+    .string({ message: 'El ID debe ser un texto' })
+    .uuid('El ID del equipo debe ser un UUID válido'),
 });
 
 // Schema para validación de parámetros de paginación en query string

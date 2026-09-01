@@ -9,15 +9,15 @@ import {
 import type {
   SingleResponse,
   PaginatedResponse,
-  Equipment,
+  EquipmentWithCategory,
 } from '../types.js';
 
 /**
- * GET /api/v1/equipment — Listar equipos con paginación
+ * GET /api/v1/equipment — Listar equipos con paginación en BD
  */
 export async function getAll(
   req: Request,
-  res: Response<PaginatedResponse<Equipment>>,
+  res: Response<PaginatedResponse<EquipmentWithCategory>>,
   next: NextFunction,
 ): Promise<void> {
   try {
@@ -34,11 +34,11 @@ export async function getAll(
 }
 
 /**
- * GET /api/v1/equipment/:id — Obtener equipo por ID
+ * GET /api/v1/equipment/:id — Obtener equipo por ID (UUID) incluyendo relación de categoría
  */
 export async function getById(
   req: Request,
-  res: Response<SingleResponse<Equipment>>,
+  res: Response<SingleResponse<EquipmentWithCategory>>,
   next: NextFunction,
 ): Promise<void> {
   try {
@@ -55,11 +55,11 @@ export async function getById(
 }
 
 /**
- * POST /api/v1/equipment — Crear nuevo equipo
+ * POST /api/v1/equipment — Crear nuevo equipo en PostgreSQL
  */
 export async function create(
   req: Request,
-  res: Response<SingleResponse<Equipment>>,
+  res: Response<SingleResponse<EquipmentWithCategory>>,
   next: NextFunction,
 ): Promise<void> {
   try {
@@ -76,11 +76,11 @@ export async function create(
 }
 
 /**
- * PUT /api/v1/equipment/:id — Actualizar equipo completo / parcial
+ * PUT /api/v1/equipment/:id — Actualizar equipo en PostgreSQL
  */
 export async function update(
   req: Request,
-  res: Response<SingleResponse<Equipment>>,
+  res: Response<SingleResponse<EquipmentWithCategory>>,
   next: NextFunction,
 ): Promise<void> {
   try {
@@ -102,7 +102,7 @@ export async function update(
 }
 
 /**
- * DELETE /api/v1/equipment/:id — Eliminar equipo
+ * DELETE /api/v1/equipment/:id — Eliminar equipo de PostgreSQL
  */
 export async function remove(
   req: Request,

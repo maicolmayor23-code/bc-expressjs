@@ -1,154 +1,221 @@
-# 🎧 Proyecto Semana 04 — Validación, Errores y Logging
-## Dominio: DJ / Sonido y Luces (Equipment API)
+# 🎧 Proyecto Semana 05 — API con PostgreSQL y Prisma ORM
+## Dominio: DJ / Sonido y Luces (Equipment & Category API)
 
-API REST desarrollada con **Express.js** y **TypeScript**, refactorizada y evolucionada para la **Semana 04** del Bootcamp. Incorpora validación runtime con **Zod**, manejo estructurado de errores con **AppError**, middleware global de errores y logging profesional con **Winston** y **Morgan**.
+API REST profesional desarrollada con **Express.js**, **TypeScript**, **PostgreSQL** y **Prisma ORM** para la **Semana 05** del Bootcamp. Implementa arquitectura en capas, validación con **Zod**, manejo estructurado de errores con **AppError**, logging con **Winston + Morgan**, migraciones versionadas y semillas de datos demo (**seed**).
 
 ---
 
 ## 📌 1. Información del Dominio
 
 * **Dominio Asignado:** DJ / Sonido y Luces
-* **Recurso Principal:** `Equipment` (`equipment`)
-* **Categorías Válidas:**
-  * `sound`: Equipos de sonido (bafles, consolas, micrófonos).
-  * `lights`: Iluminación (cabezas móviles, leds, par leds).
-  * `dj_gear`: Consolas DJ y controladores.
-  * `effects`: Efectos especiales (máquinas de humo, ventiscas).
+* **Recurso Principal:** `Equipment` (`/api/v1/equipment` o `/api/v1/items`)
+* **Recurso Secundario (Relación 1:N):** `Category`
+* **Regla del Bootcamp:** Todas las Claves Primarias (`PK`) y Claves Foráneas (`FK`) se definen estrictamente en formato **UUID** (`String @id @default(uuid()) @db.Uuid`).
 
 ---
 
-## 📋 2. Estructura de la Entidad `Equipment`
+## 📐 2. Diagrama Entidad-Relación (ER)
 
-```typescript
-interface Equipment {
-  id: number;           // Identificador único (autoincremental)
-  name: string;         // Nombre del equipo (ej: "Consola DJ Pioneer DDJ-FLX6")
-  category: "sound" | "lights" | "dj_gear" | "effects"; // Categoría del equipo
-  dailyRate: number;    // Tarifa diaria de alquiler (número positivo > 0)
-  isAvailable: boolean; // Disponibilidad para alquiler (por defecto: true)
-  createdAt: string;    // Fecha de creación en formato ISO 8601
+```mermaid
+erDiagram
+    Category ||--o{ Equipment : "contiene (1:N)"
+    
+    Category {
+        uuid id PK
+        string name UK
+        string description
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Equipment {
+        uuid id PK
+        string name
+        string serialNumber UK
+        float dailyRate
+        boolean isAvailable
+        uuid categoryId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+```
+
+---
+
+## 🛠️ 3. Estructura de Modelos en Prisma (`prisma/schema.prisma`)
+
+```prisma
+model Category {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String      @unique
+  description String?
+  equipments  Equipment[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Equipment {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  serialNumber String   @unique
+  dailyRate    Float
+  isAvailable  Boolean  @default(true)
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId   String   @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 ```
 
 ---
 
-## 🛡️ 3. Validaciones Runtime con Zod
-
-Ubicación: `src/schemas/equipment.schema.ts`
-
-* **`createEquipmentSchema`**:
-  * `name`: string obligatorio, no vacío, `.trim()`.
-  * `category`: enum exacto (`sound`, `lights`, `dj_gear`, `effects`).
-  * `dailyRate`: número positivo mayor a `0`.
-  * `isAvailable`: booleano opcional (default `true`).
-* **`updateEquipmentSchema`**:
-  * Reutiliza `createEquipmentSchema.partial()` para permitir actualizaciones parciales.
-* **`equipmentIdParamSchema`**:
-  * Valida el parámetro `:id` en rutas convirtiendo a entero positivo (`z.coerce.number().int().positive()`).
-* **`queryPaginationSchema`**:
-  * Valida parámetros `page` (default 1) y `limit` (default 10) para la paginación.
-
-Los tipos DTOs TypeScript se infieren directamente de los esquemas Zod utilizando `z.infer<>`.
-
----
-
-## 💥 4. Manejo de Errores Estructurado
-
-* **Clase `AppError`** (`src/errors/AppError.ts`):
-  * Modela errores operacionales del dominio especificando `statusCode` e `isOperational = true`.
-  * La capa de servicio lanza `throw new AppError(404, "Equipment with ID X not found")`.
-* **Middleware `notFound`** (`src/middlewares/notFound.ts`):
-  * Captura cualquier ruta inexistente y responde en JSON `404 Not Found` (`{ "error": "Not Found", "message": "Route not found" }`).
-* **Middleware Global `errorHandler`** (`src/middlewares/errorHandler.ts`):
-  * Firma de 4 parámetros: `(err, req, res, next)`.
-  * **`ZodError`**: Responde `400 Bad Request` con arreglo estructurado de `issues[]`.
-  * **`AppError`**: Responde `err.statusCode`, emite `logger.warn()` y entrega JSON descriptivo.
-  * **Error Genérico (500)**: Registra mediante `logger.error()` y oculta detalles internos en producción.
-
----
-
-## 📝 5. Logging Profesional (Winston + Morgan)
-
-Ubicación: `src/config/logger.ts`
-
-* **Winston Logger**:
-  * **Desarrollo (`NODE_ENV !== 'production'`)**: Nivel `http`, salida en consola formateada con timestamp y colores.
-  * **Producción (`NODE_ENV === 'production'`)**: Nivel `warn`, salida JSON estructurada en consola y archivo log `logs/error.log`.
-* **Morgan Middleware**:
-  * Captura peticiones HTTP automáticamente y redirige los logs al stream `logger.http()`.
-* **Cero `console.*`**: Todo el código en `src/` utiliza exclusivamente Winston (`logger.info`, `logger.warn`, `logger.error`, `logger.http`).
-
----
-
-## 🏗️ 6. Arquitectura en Capas
-
-```text
-src/
-├── config/
-│   └── logger.ts          # Winston logger + Morgan stream
-├── errors/
-│   └── AppError.ts        # Clase para errores operacionales HTTP
-├── middlewares/
-│   ├── errorHandler.ts    # Handler de errores de 4 parámetros
-│   └── notFound.ts        # Handler para rutas 404 JSON
-├── schemas/
-│   └── equipment.schema.ts # Esquemas Zod y tipos DTOs inferidos
-├── repositories/
-│   └── equipment.repository.ts # Persistencia en memoria
-├── services/
-│   └── equipment.service.ts   # Lógica de negocio y disparo de AppError
-├── controllers/
-│   └── equipment.controller.ts # Thin controllers con safeParse() y next(err)
-├── routes/
-│   ├── equipment.routes.ts    # 5 endpoints CRUD
-│   └── items.routes.ts        # Re-exportación para alias
-├── types.ts               # Interfaces globales y contratos de respuesta
-├── app.ts                 # Configuración de Express, middlewares y rutas
-└── server.ts              # Bootstrap del servidor y graceful shutdown
-```
-
----
-
-## 🚀 7. Endpoints API
-
-### Recurso Principal: `/api/v1/equipment`
-### Alias de Compatibilidad: `/api/v1/items`
-
-| Método | Ruta | Descripción | Estado HTTP |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/equipment` | Obtener equipos paginados (`?page=1&limit=10`) | `200 OK` |
-| `GET` | `/api/v1/equipment/:id` | Obtener equipo por ID | `200 OK` / `404 Not Found` |
-| `POST` | `/api/v1/equipment` | Crear nuevo equipo (validación Zod) | `201 Created` / `400 Bad Request` |
-| `PUT` | `/api/v1/equipment/:id` | Actualizar equipo parcial/total | `200 OK` / `400` / `404` |
-| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo por ID | `204 No Content` / `404` |
-
----
-
-## 💻 8. Instalación y Ejecución
+## 🚀 4. Instalación y Ejecución
 
 ### Requisitos Previos
 * Node.js >= 22.0.0
 * pnpm >= 10.0.0
+* Docker y Docker Compose (o PostgreSQL 16 local)
 
-### Pasos
+### Pasos de Inicio Rápido
 
 1. **Instalar dependencias**:
    ```bash
    pnpm install
    ```
 
-2. **Iniciar servidor en modo desarrollo**:
+2. **Levantar PostgreSQL con Docker**:
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Configurar variables de entorno**:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Ejecutar migraciones de Prisma**:
+   ```bash
+   pnpm dlx prisma migrate dev --name init
+   ```
+
+5. **Ejecutar Seed de datos iniciales**:
+   ```bash
+   pnpm dlx prisma db seed
+   ```
+
+6. **Iniciar servidor en modo desarrollo**:
    ```bash
    pnpm dev
    ```
-   Servidor disponible en: `http://localhost:3000`
+   *Servidor escuchando en:* `http://localhost:3000`
 
-3. **Compilar proyecto (verificación TypeScript)**:
-   ```bash
-   pnpm run build
-   ```
+---
 
-4. **Iniciar en producción**:
-   ```bash
-   NODE_ENV=production pnpm start
-   ```
+## 📜 5. Logs de Ejecución del Seed (`pnpm dlx prisma db seed`)
+
+```text
+> proyecto-semana-05@1.0.0 db:seed
+> prisma db seed
+
+Running seed command `tsx prisma/seed.ts` ...
+🌱 Iniciando seed de datos para DJ / Sonido y Luces...
+  [Category] Upserted: "DJ Gear"
+  [Category] Upserted: "Sonido Profesional"
+  [Category] Upserted: "Iluminación y Láser"
+  [Category] Upserted: "Efectos Especiales"
+  [Equipment] Upserted: "Consola DJ Pioneer DDJ-FLX6-GT" (SN: DJ-PIONEER-FLX6-001)
+  [Equipment] Upserted: "Bafle Amplificado JBL EON715 1300W" (SN: SND-JBL-EON715-002)
+  [Equipment] Upserted: "Cabeza Móvil LED Beam 230W RGBW" (SN: LGT-BEAM-230W-003)
+  [Equipment] Upserted: "Máquina de Humo Chauvet Hurricane 1200" (SN: EFF-CHAUVET-1200-004)
+  [Equipment] Upserted: "Altavoz Activo QSC K12.2 2000W" (SN: SND-QSC-K122-005)
+  [Equipment] Upserted: "Foco Par LED 18x12W RGBW DMX" (SN: LGT-PARLED-18X12-006)
+✅ Seed completado exitosamente.
+```
+
+---
+
+## 🌐 6. Endpoints de la API REST
+
+### Recurso Principal: `/api/v1/equipment` (Alias compatibilidad: `/api/v1/items`)
+
+| Método | Ruta | Descripción | Estado HTTP |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/equipment?page=1&limit=10` | Obtener equipos paginados con PostgreSQL | `200 OK` |
+| `GET` | `/api/v1/equipment/:id` | Obtener detalle de equipo por UUID (incluye categoría) | `200 OK` / `404 Not Found` |
+| `POST` | `/api/v1/equipment` | Crear equipo (validación Zod) | `201 Created` / `400` / `409` |
+| `PUT` | `/api/v1/equipment/:id` | Actualizar equipo parcial/total | `200 OK` / `400` / `404` / `409` |
+| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo por UUID | `204 No Content` / `404` |
+
+---
+
+## 📸 7. Ejemplos de Request / Response
+
+### 1. GET `/api/v1/equipment?page=1&limit=2`
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "e9b2a1f4-7c3d-4e8a-9f1b-2c3d4e5f6a7b",
+      "name": "Consola DJ Pioneer DDJ-FLX6-GT",
+      "serialNumber": "DJ-PIONEER-FLX6-001",
+      "dailyRate": 45,
+      "isAvailable": true,
+      "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "createdAt": "2026-08-31T17:00:00.000Z",
+      "updatedAt": "2026-08-31T17:00:00.000Z",
+      "category": {
+        "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+        "name": "DJ Gear",
+        "description": "Consolas, controladores y reproductores para DJ profesional",
+        "createdAt": "2026-08-31T17:00:00.000Z",
+        "updatedAt": "2026-08-31T17:00:00.000Z"
+      }
+    }
+  ],
+  "total": 6,
+  "page": 1,
+  "limit": 2
+}
+```
+
+### 2. POST `/api/v1/equipment`
+**Request Body:**
+```json
+{
+  "name": "Sistema Line Array RCF HDL 20-A",
+  "serialNumber": "SND-RCF-HDL20-007",
+  "dailyRate": 120.0,
+  "isAvailable": true,
+  "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+}
+```
+**Response (201 Created):**
+```json
+{
+  "data": {
+    "id": "f8a9b0c1-d2e3-4f5a-6b7c-8d9e0f1a2b3c",
+    "name": "Sistema Line Array RCF HDL 20-A",
+    "serialNumber": "SND-RCF-HDL20-007",
+    "dailyRate": 120,
+    "isAvailable": true,
+    "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+    "createdAt": "2026-08-31T17:15:00.000Z",
+    "updatedAt": "2026-08-31T17:15:00.000Z",
+    "category": {
+      "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Sonido Profesional",
+      "description": "Bafles amplificados, subwoofers y sistemas Line Array"
+    }
+  }
+}
+```
+
+---
+
+## 💥 8. Manejo de Errores de Prisma
+
+| Código Prisma | Causa | Mapeo HTTP | Respuesta JSON |
+| :--- | :--- | :--- | :--- |
+| **`P2025`** | Registro no encontrado al intentar `findUnique`, `update` o `delete`. | `404 Not Found` | `{ "error": "Not Found", "message": "Recurso no encontrado" }` |
+| **`P2002`** | Violación de restricción única (`@unique`), ej. `serialNumber` repetido. | `409 Conflict` | `{ "error": "Conflict", "message": "Ya existe un registro con ese valor" }` |

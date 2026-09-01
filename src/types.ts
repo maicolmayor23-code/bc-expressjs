@@ -1,20 +1,17 @@
-import type { z } from 'zod';
+import type { Equipment as PrismaEquipment, Category as PrismaCategory } from '@prisma/client';
 import type {
-  equipmentCategorySchema,
   CreateEquipmentDto,
   UpdateEquipmentDto,
 } from './schemas/equipment.schema.js';
 
-export type EquipmentCategory = z.infer<typeof equipmentCategorySchema>;
+// Exportar modelos derivados directamente de Prisma Client
+export type Equipment = PrismaEquipment;
+export type Category = PrismaCategory;
 
-export interface Equipment {
-  id: number;
-  name: string;
-  category: EquipmentCategory;
-  dailyRate: number;
-  isAvailable: boolean;
-  createdAt: string;
-}
+// Tipo ampliado con relación incluida (útil para respuestas GET con include)
+export type EquipmentWithCategory = PrismaEquipment & {
+  category: PrismaCategory;
+};
 
 export type { CreateEquipmentDto, UpdateEquipmentDto };
 

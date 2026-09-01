@@ -1,103 +1,120 @@
-import type { Equipment, CreateEquipmentDto, UpdateEquipmentDto } from '../types.js';
-
-// Base de datos en memoria para el dominio DJ / Sonido y Luces
-const items: Equipment[] = [
-  {
-    id: 1,
-    name: 'Consola DJ Pioneer DDJ-FLX6',
-    category: 'dj_gear',
-    dailyRate: 45.0,
-    isAvailable: true,
-    createdAt: new Date('2026-01-10T10:00:00Z').toISOString(),
-  },
-  {
-    id: 2,
-    name: 'Bafle Amplificado JBL EON715 1300W',
-    category: 'sound',
-    dailyRate: 35.0,
-    isAvailable: true,
-    createdAt: new Date('2026-01-12T11:30:00Z').toISOString(),
-  },
-  {
-    id: 3,
-    name: 'Cabeza Móvil LED Beam 230W RGBW',
-    category: 'lights',
-    dailyRate: 25.0,
-    isAvailable: false,
-    createdAt: new Date('2026-01-15T14:15:00Z').toISOString(),
-  },
-  {
-    id: 4,
-    name: 'Máquina de Humo Chauvet Hurricane 1200',
-    category: 'effects',
-    dailyRate: 20.0,
-    isAvailable: true,
-    createdAt: new Date('2026-01-18T09:00:00Z').toISOString(),
-  },
-];
-
-let nextId = 5;
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import { AppError } from '../errors/AppError.js';
+import type { CreateEquipmentDto, UpdateEquipmentDto } from '../schemas/equipment.schema.js';
+import type { EquipmentWithCategory, PaginatedResponse } from '../types.js';
 
 /**
- * Retorna todos los equipos almacenados (copia defensiva)
+ * Maneja los errores conocidos de Prisma convirtiéndolos a AppError
  */
-export async function findAll(): Promise<Equipment[]> {
-  return items.map((item) => ({ ...item }));
-}
-
-/**
- * Busca y retorna un equipo por su ID, o undefined si no existe (copia defensiva)
- */
-export async function findById(id: number): Promise<Equipment | undefined> {
-  const item = items.find((e) => e.id === id);
-  return item ? { ...item } : undefined;
-}
-
-/**
- * Crea un nuevo equipo con ID autoincremental y fecha de creación ISO
- */
-export async function create(dto: CreateEquipmentDto): Promise<Equipment> {
-  const newItem: Equipment = {
-    id: nextId++,
-    name: dto.name,
-    category: dto.category,
-    dailyRate: dto.dailyRate,
-    isAvailable: dto.isAvailable ?? true,
-    createdAt: new Date().toISOString(),
-  };
-  items.push(newItem);
-  return { ...newItem };
-}
-
-/**
- * Actualiza los campos de un equipo existente por ID
- */
-export async function update(id: number, dto: UpdateEquipmentDto): Promise<Equipment | undefined> {
-  const index = items.findIndex((e) => e.id === id);
-  if (index === -1) {
-    return undefined;
+function handlePrismaError(error: unknown): never {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2025') {
+      throw new AppError(404, 'Recurso no encontrado');
+    }
+    if (error.code === 'P2002') {
+      throw new AppError(409, 'Ya existe un registro con ese valor');
+    }
   }
-
-  const existingItem = items[index];
-  const updatedItem: Equipment = {
-    ...existingItem,
-    ...dto,
-    id: existingItem.id, // El ID se preserva inmutable
-  };
-
-  items[index] = updatedItem;
-  return { ...updatedItem };
+  throw error;
 }
 
 /**
- * Elimina un equipo por ID. Retorna true si fue eliminado o false si no existía
+ * Obtiene el listado paginado de equipos desde PostgreSQL usando skip y take
  */
-export async function remove(id: number): Promise<boolean> {
-  const index = items.findIndex((e) => e.id === id);
-  if (index === -1) {
-    return false;
-  }
+export async function findAll(
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse<EquipmentWithCategory>> {
+  const skip = (page - 1) * limit;
 
-  items.splice(index, 1);
-  return true;
+  try {
+    const [data, total] = await Promise.all([
+      prisma.equipment.findMany({
+        skip,
+        take: limit,
+        include: {
+          category: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.equipment.count(),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+    };
+  } catch (error) {
+    handlePrismaError(error);
+  }
+}
+
+/**
+ * Busca un equipo por su ID UUID incluyendo la relación con su Categoría
+ */
+export async function findById(id: string): Promise<EquipmentWithCategory | null> {
+  try {
+    return await prisma.equipment.findUnique({
+      where: { id },
+      include: {
+        category: true,
+      },
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
+}
+
+/**
+ * Crea un nuevo equipo en PostgreSQL con validaciones de clave foránea
+ */
+export async function create(dto: CreateEquipmentDto): Promise<EquipmentWithCategory> {
+  try {
+    return await prisma.equipment.create({
+      data: dto,
+      include: {
+        category: true,
+      },
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
+}
+
+/**
+ * Actualiza los campos de un equipo existente por ID UUID
+ */
+export async function update(
+  id: string,
+  dto: UpdateEquipmentDto,
+): Promise<EquipmentWithCategory> {
+  try {
+    return await prisma.equipment.update({
+      where: { id },
+      data: dto,
+      include: {
+        category: true,
+      },
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
+}
+
+/**
+ * Elimina un equipo por ID UUID en PostgreSQL
+ */
+export async function remove(id: string): Promise<void> {
+  try {
+    await prisma.equipment.delete({
+      where: { id },
+    });
+  } catch (error) {
+    handlePrismaError(error);
+  }
 }
