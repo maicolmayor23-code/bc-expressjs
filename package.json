@@ -1,7 +1,7 @@
 {
-  "name": "proyecto-semana-05",
+  "name": "proyecto-semana-06",
   "version": "1.0.0",
-  "description": "Week 05 — Project: Express REST API with PostgreSQL & Prisma ORM (DJ / Sonido y Luces)",
+  "description": "Week 06 — Project: Express REST API with MongoDB & Mongoose (DJ / Sonido y Luces)",
   "main": "dist/server.js",
   "engines": {
     "node": ">=22.0.0"
@@ -9,18 +9,13 @@
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "prisma generate && tsc",
+    "build": "tsc",
     "start": "node dist/server.js",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx src/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "6.4.0",
     "express": "5.1.0",
+    "mongoose": "9.4.1",
     "morgan": "^1.11.0",
     "winston": "^3.19.0",
     "zod": "^4.4.3"
@@ -29,8 +24,8 @@
     "@types/express": "5.0.1",
     "@types/morgan": "^1.9.10",
     "@types/node": "22.15.21",
-    "prisma": "6.4.0",
     "tsx": "4.19.4",
     "typescript": "5.8.3"
   }
 }
+

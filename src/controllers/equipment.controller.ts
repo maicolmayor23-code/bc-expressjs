@@ -1,121 +1,50 @@
 import type { Request, Response, NextFunction } from 'express';
 import * as equipmentService from '../services/equipment.service.js';
-import {
-  createEquipmentSchema,
-  updateEquipmentSchema,
-  equipmentIdParamSchema,
-  queryPaginationSchema,
-} from '../schemas/equipment.schema.js';
-import type {
-  SingleResponse,
-  PaginatedResponse,
-  EquipmentWithCategory,
-} from '../types.js';
+import { createEquipmentSchema, updateEquipmentSchema } from '../schemas/equipment.schema.js';
 
-/**
- * GET /api/v1/equipment — Listar equipos con paginación en BD
- */
-export async function getAll(
-  req: Request,
-  res: Response<PaginatedResponse<EquipmentWithCategory>>,
-  next: NextFunction,
-): Promise<void> {
+export async function getAll(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const parseResult = queryPaginationSchema.safeParse(req.query);
-    if (!parseResult.success) {
-      return next(parseResult.error);
-    }
-
-    const result = await equipmentService.findAll(parseResult.data);
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 10);
+    const result = await equipmentService.getAllEquipment(page, limit);
     res.json(result);
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * GET /api/v1/equipment/:id — Obtener equipo por ID (UUID) incluyendo relación de categoría
- */
-export async function getById(
-  req: Request,
-  res: Response<SingleResponse<EquipmentWithCategory>>,
-  next: NextFunction,
-): Promise<void> {
+export async function getById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const paramResult = equipmentIdParamSchema.safeParse(req.params);
-    if (!paramResult.success) {
-      return next(paramResult.error);
-    }
-
-    const equipment = await equipmentService.findById(paramResult.data.id);
-    res.json({ data: equipment });
+    const equipment = await equipmentService.getEquipmentById(req.params.id as string);
+    res.json(equipment);
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * POST /api/v1/equipment — Crear nuevo equipo en PostgreSQL
- */
-export async function create(
-  req: Request,
-  res: Response<SingleResponse<EquipmentWithCategory>>,
-  next: NextFunction,
-): Promise<void> {
+export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const bodyResult = createEquipmentSchema.safeParse(req.body);
-    if (!bodyResult.success) {
-      return next(bodyResult.error);
-    }
-
-    const newEquipment = await equipmentService.create(bodyResult.data);
-    res.status(201).json({ data: newEquipment });
+    const dto = createEquipmentSchema.parse(req.body);
+    const equipment = await equipmentService.createEquipment(dto);
+    res.status(201).json(equipment);
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * PUT /api/v1/equipment/:id — Actualizar equipo en PostgreSQL
- */
-export async function update(
-  req: Request,
-  res: Response<SingleResponse<EquipmentWithCategory>>,
-  next: NextFunction,
-): Promise<void> {
+export async function update(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const paramResult = equipmentIdParamSchema.safeParse(req.params);
-    if (!paramResult.success) {
-      return next(paramResult.error);
-    }
-
-    const bodyResult = updateEquipmentSchema.safeParse(req.body);
-    if (!bodyResult.success) {
-      return next(bodyResult.error);
-    }
-
-    const updatedEquipment = await equipmentService.update(paramResult.data.id, bodyResult.data);
-    res.json({ data: updatedEquipment });
+    const dto = updateEquipmentSchema.parse(req.body);
+    const updated = await equipmentService.updateEquipment(req.params.id as string, dto);
+    res.json(updated);
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * DELETE /api/v1/equipment/:id — Eliminar equipo de PostgreSQL
- */
-export async function remove(
-  req: Request,
-  res: Response<void>,
-  next: NextFunction,
-): Promise<void> {
+export async function remove(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const paramResult = equipmentIdParamSchema.safeParse(req.params);
-    if (!paramResult.success) {
-      return next(paramResult.error);
-    }
-
-    await equipmentService.remove(paramResult.data.id);
+    await equipmentService.deleteEquipment(req.params.id as string);
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -1,80 +1,52 @@
-# 🎧 Proyecto Semana 05 — API con PostgreSQL y Prisma ORM
-## Dominio: DJ / Sonido y Luces (Equipment & Category API)
+# 🎧 Proyecto Semana 06 — API REST con MongoDB + Mongoose
+## Dominio Asignado: DJ / Sonido y Luces
 
-API REST profesional desarrollada con **Express.js**, **TypeScript**, **PostgreSQL** y **Prisma ORM** para la **Semana 05** del Bootcamp. Implementa arquitectura en capas, validación con **Zod**, manejo estructurado de errores con **AppError**, logging con **Winston + Morgan**, migraciones versionadas y semillas de datos demo (**seed**).
+API REST profesional desarrollada con **Express 5**, **TypeScript**, **MongoDB 7** y **Mongoose 9.4.1** para la **Semana 06** del Bootcamp. Implementa arquitectura en capas, relaciones por referencia con **`.populate()`**, validación con **Zod**, manejo estructurado de errores nativos de MongoDB (`CastError`, `11000`), paginación en lecturas optimizada con **`.lean()`**, y script de sembrado de datos demo (**`seed`**).
 
 ---
 
-## 📌 1. Información del Dominio
+## 📌 1. Información del Dominio y Entidades
 
 * **Dominio Asignado:** DJ / Sonido y Luces
-* **Recurso Principal:** `Equipment` (`/api/v1/equipment` o `/api/v1/items`)
-* **Recurso Secundario (Relación 1:N):** `Category`
-* **Regla del Bootcamp:** Todas las Claves Primarias (`PK`) y Claves Foráneas (`FK`) se definen estrictamente en formato **UUID** (`String @id @default(uuid()) @db.Uuid`).
+* **Entidad Secundaria (Sin referencias):** `Category` (`/api/v1/categories`)
+  - Representa las categorías de equipos (ej. *Sonido & Altavoces*, *Iluminación & Láseres*, *Controladores DJ & Mixers*, *Efectos Especiales & Humo*).
+* **Entidad Principal (Con referencia a Secundaria):** `Equipment` (`/api/v1/equipment` y alias `/api/v1/items`)
+  - Representa los equipos de sonido y luces disponibles para alquiler.
+  - Guarda una referencia mediante `Schema.Types.ObjectId` (con `ref: 'Category'`) hacia la categoría correspondiente.
 
 ---
 
-## 📐 2. Diagrama Entidad-Relación (ER)
+## 📐 2. Modelo de Datos y Esquemas Mongoose
 
-```mermaid
-erDiagram
-    Category ||--o{ Equipment : "contiene (1:N)"
-    
-    Category {
-        uuid id PK
-        string name UK
-        string description
-        datetime createdAt
-        datetime updatedAt
-    }
+### Categoría (`Category`)
+```ts
+const categorySchema = new Schema<ICategory>({
+  name: { type: String, required: true, unique: true, trim: true, maxlength: 100 },
+  description: { type: String, trim: true, maxlength: 500 },
+  active: { type: Boolean, default: true }
+}, { timestamps: true });
+```
 
-    Equipment {
-        uuid id PK
-        string name
-        string serialNumber UK
-        float dailyRate
-        boolean isAvailable
-        uuid categoryId FK
-        datetime createdAt
-        datetime updatedAt
-    }
+### Equipo (`Equipment`)
+```ts
+const equipmentSchema = new Schema<IEquipment>({
+  name: { type: String, required: true, trim: true, maxlength: 120 },
+  serialNumber: { type: String, required: true, unique: true, trim: true, uppercase: true },
+  brand: { type: String, required: true, trim: true },
+  dailyRate: { type: Number, required: true, min: 0 },
+  isAvailable: { type: Boolean, default: true },
+  category: { type: Schema.Types.ObjectId, ref: 'Category', required: true }
+}, { timestamps: true });
 ```
 
 ---
 
-## 🛠️ 3. Estructura de Modelos en Prisma (`prisma/schema.prisma`)
-
-```prisma
-model Category {
-  id          String      @id @default(uuid()) @db.Uuid
-  name        String      @unique
-  description String?
-  equipments  Equipment[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-}
-
-model Equipment {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String
-  serialNumber String   @unique
-  dailyRate    Float
-  isAvailable  Boolean  @default(true)
-  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  categoryId   String   @db.Uuid
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-```
-
----
-
-## 🚀 4. Instalación y Ejecución
+## 🚀 3. Instalación y Ejecución
 
 ### Requisitos Previos
 * Node.js >= 22.0.0
 * pnpm >= 10.0.0
-* Docker y Docker Compose (o PostgreSQL 16 local)
+* Docker y Docker Compose (para MongoDB 7)
 
 ### Pasos de Inicio Rápido
 
@@ -83,7 +55,7 @@ model Equipment {
    pnpm install
    ```
 
-2. **Levantar PostgreSQL con Docker**:
+2. **Levantar MongoDB 7 con Docker**:
    ```bash
    docker compose up -d
    ```
@@ -93,17 +65,12 @@ model Equipment {
    cp .env.example .env
    ```
 
-4. **Ejecutar migraciones de Prisma**:
+4. **Ejecutar Seed de datos iniciales**:
    ```bash
-   pnpm dlx prisma migrate dev --name init
+   pnpm seed
    ```
 
-5. **Ejecutar Seed de datos iniciales**:
-   ```bash
-   pnpm dlx prisma db seed
-   ```
-
-6. **Iniciar servidor en modo desarrollo**:
+5. **Iniciar servidor en modo desarrollo**:
    ```bash
    pnpm dev
    ```
@@ -111,111 +78,50 @@ model Equipment {
 
 ---
 
-## 📜 5. Logs de Ejecución del Seed (`pnpm dlx prisma db seed`)
+## 📜 4. Logs de Ejecución del Seed (`pnpm seed`)
 
 ```text
-> proyecto-semana-05@1.0.0 db:seed
-> prisma db seed
-
-Running seed command `tsx prisma/seed.ts` ...
-🌱 Iniciando seed de datos para DJ / Sonido y Luces...
-  [Category] Upserted: "DJ Gear"
-  [Category] Upserted: "Sonido Profesional"
-  [Category] Upserted: "Iluminación y Láser"
-  [Category] Upserted: "Efectos Especiales"
-  [Equipment] Upserted: "Consola DJ Pioneer DDJ-FLX6-GT" (SN: DJ-PIONEER-FLX6-001)
-  [Equipment] Upserted: "Bafle Amplificado JBL EON715 1300W" (SN: SND-JBL-EON715-002)
-  [Equipment] Upserted: "Cabeza Móvil LED Beam 230W RGBW" (SN: LGT-BEAM-230W-003)
-  [Equipment] Upserted: "Máquina de Humo Chauvet Hurricane 1200" (SN: EFF-CHAUVET-1200-004)
-  [Equipment] Upserted: "Altavoz Activo QSC K12.2 2000W" (SN: SND-QSC-K122-005)
-  [Equipment] Upserted: "Foco Par LED 18x12W RGBW DMX" (SN: LGT-PARLED-18X12-006)
-✅ Seed completado exitosamente.
+🌱 Iniciando proceso de seeding para DJ / Sonido y Luces...
+🍃 Connected to MongoDB successfully
+🧹 Limpiando colecciones existentes...
+🏷️ Insertando categorías secundarias...
+✅ Se crearon 4 categorías.
+🔊 Insertando equipos principales...
+✅ Se crearon 7 equipos con sus referencias asociadas.
+🎉 Proceso de seed completado exitosamente.
+🍃 Disconnected from MongoDB
 ```
 
 ---
 
-## 🌐 6. Endpoints de la API REST
+## 🌐 5. Endpoints de la API REST
 
-### Recurso Principal: `/api/v1/equipment` (Alias compatibilidad: `/api/v1/items`)
+### Entidad Secundaria: `/api/v1/categories`
 
 | Método | Ruta | Descripción | Estado HTTP |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/equipment?page=1&limit=10` | Obtener equipos paginados con PostgreSQL | `200 OK` |
-| `GET` | `/api/v1/equipment/:id` | Obtener detalle de equipo por UUID (incluye categoría) | `200 OK` / `404 Not Found` |
-| `POST` | `/api/v1/equipment` | Crear equipo (validación Zod) | `201 Created` / `400` / `409` |
-| `PUT` | `/api/v1/equipment/:id` | Actualizar equipo parcial/total | `200 OK` / `400` / `404` / `409` |
-| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo por UUID | `204 No Content` / `404` |
+| `GET` | `/api/v1/categories` | Obtener todas las categorías (con `.lean()`) | `200 OK` |
+| `GET` | `/api/v1/categories/:id` | Obtener categoría por ObjectId | `200 OK` / `404 Not Found` / `400 Bad Request` |
+| `POST` | `/api/v1/categories` | Crear categoría (validación Zod) | `201 Created` / `400` / `409` |
+| `PUT` | `/api/v1/categories/:id` | Actualizar categoría parcial/total | `200 OK` / `400` / `404` / `409` |
+| `DELETE` | `/api/v1/categories/:id` | Eliminar categoría por ObjectId | `204 No Content` / `404` / `400` |
 
----
+### Entidad Principal: `/api/v1/equipment` (Alias compatibilidad: `/api/v1/items`)
 
-## 📸 7. Ejemplos de Request / Response
-
-### 1. GET `/api/v1/equipment?page=1&limit=2`
-**Response (200 OK):**
-```json
-{
-  "data": [
-    {
-      "id": "e9b2a1f4-7c3d-4e8a-9f1b-2c3d4e5f6a7b",
-      "name": "Consola DJ Pioneer DDJ-FLX6-GT",
-      "serialNumber": "DJ-PIONEER-FLX6-001",
-      "dailyRate": 45,
-      "isAvailable": true,
-      "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-      "createdAt": "2026-08-31T17:00:00.000Z",
-      "updatedAt": "2026-08-31T17:00:00.000Z",
-      "category": {
-        "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-        "name": "DJ Gear",
-        "description": "Consolas, controladores y reproductores para DJ profesional",
-        "createdAt": "2026-08-31T17:00:00.000Z",
-        "updatedAt": "2026-08-31T17:00:00.000Z"
-      }
-    }
-  ],
-  "total": 6,
-  "page": 1,
-  "limit": 2
-}
-```
-
-### 2. POST `/api/v1/equipment`
-**Request Body:**
-```json
-{
-  "name": "Sistema Line Array RCF HDL 20-A",
-  "serialNumber": "SND-RCF-HDL20-007",
-  "dailyRate": 120.0,
-  "isAvailable": true,
-  "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
-}
-```
-**Response (201 Created):**
-```json
-{
-  "data": {
-    "id": "f8a9b0c1-d2e3-4f5a-6b7c-8d9e0f1a2b3c",
-    "name": "Sistema Line Array RCF HDL 20-A",
-    "serialNumber": "SND-RCF-HDL20-007",
-    "dailyRate": 120,
-    "isAvailable": true,
-    "categoryId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-    "createdAt": "2026-08-31T17:15:00.000Z",
-    "updatedAt": "2026-08-31T17:15:00.000Z",
-    "category": {
-      "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-      "name": "Sonido Profesional",
-      "description": "Bafles amplificados, subwoofers y sistemas Line Array"
-    }
-  }
-}
-```
-
----
-
-## 💥 8. Manejo de Errores de Prisma
-
-| Código Prisma | Causa | Mapeo HTTP | Respuesta JSON |
+| Método | Ruta | Descripción | Estado HTTP |
 | :--- | :--- | :--- | :--- |
-| **`P2025`** | Registro no encontrado al intentar `findUnique`, `update` o `delete`. | `404 Not Found` | `{ "error": "Not Found", "message": "Recurso no encontrado" }` |
-| **`P2002`** | Violación de restricción única (`@unique`), ej. `serialNumber` repetido. | `409 Conflict` | `{ "error": "Conflict", "message": "Ya existe un registro con ese valor" }` |
+| `GET` | `/api/v1/equipment?page=1&limit=10` | Obtener equipos paginados con `.lean()` y `.populate('category')` | `200 OK` |
+| `GET` | `/api/v1/equipment/:id` | Obtener equipo por ObjectId con `.populate('category')` | `200 OK` / `404 Not Found` / `400 Bad Request` |
+| `POST` | `/api/v1/equipment` | Crear equipo (valida Regex ObjectId 24-hex de categoría) | `201 Created` / `400` / `409` |
+| `PUT` | `/api/v1/equipment/:id` | Actualizar equipo | `200 OK` / `400` / `404` / `409` |
+| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo por ObjectId | `204 No Content` / `404` / `400` |
+
+---
+
+## 💥 6. Manejo de Errores Nativos de MongoDB y Mongoose
+
+| Error Nativo | Causa | Mapeo HTTP | Respuesta JSON |
+| :--- | :--- | :--- | :--- |
+| **`mongoose.Error.CastError`** | Formato de ObjectId inválido (ej. `"abc123"`). | `400 Bad Request` | `{ "error": "Application Error", "message": "ID inválido" }` |
+| **`MongoServerError (11000)`** | Violación de índice único (`unique: true`), ej. `serialNumber` o `name` duplicado. | `409 Conflict` | `{ "error": "Application Error", "message": "Ya existe un registro con ese valor" }` |
+| **`null` en lectura/escritura** | Documento no encontrado al consultar por ObjectId válido. | `404 Not Found` | `{ "error": "Application Error", "message": "Equipo no encontrado" }` |

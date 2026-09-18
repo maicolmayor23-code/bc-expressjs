@@ -1,19 +1,9 @@
-import type { Equipment as PrismaEquipment, Category as PrismaCategory } from '@prisma/client';
-import type {
-  CreateEquipmentDto,
-  UpdateEquipmentDto,
-} from './schemas/equipment.schema.js';
+import type { IEquipment } from './models/equipment.model.js';
+import type { ICategory } from './models/category.model.js';
+import type { CreateEquipmentDto, UpdateEquipmentDto } from './schemas/equipment.schema.js';
+import type { CreateCategoryDto, UpdateCategoryDto } from './schemas/category.schema.js';
 
-// Exportar modelos derivados directamente de Prisma Client
-export type Equipment = PrismaEquipment;
-export type Category = PrismaCategory;
-
-// Tipo ampliado con relación incluida (útil para respuestas GET con include)
-export type EquipmentWithCategory = PrismaEquipment & {
-  category: PrismaCategory;
-};
-
-export type { CreateEquipmentDto, UpdateEquipmentDto };
+export type { IEquipment, ICategory, CreateEquipmentDto, UpdateEquipmentDto, CreateCategoryDto, UpdateCategoryDto };
 
 export interface SingleResponse<T> {
   data: T;
@@ -23,7 +13,7 @@ export interface PaginatedResponse<T> {
   data: T[];
   total: number;
   page: number;
-  limit: number;
+  totalPages: number;
 }
 
 export interface ErrorIssue {

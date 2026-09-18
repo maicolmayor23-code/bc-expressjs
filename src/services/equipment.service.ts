@@ -1,64 +1,56 @@
-import * as equipmentRepository from '../repositories/equipment.repository.js';
+import * as equipmentRepo from '../repositories/equipment.repository.js';
+import * as categoryRepo from '../repositories/category.repository.js';
 import { AppError } from '../errors/AppError.js';
-import type {
-  EquipmentWithCategory,
-  CreateEquipmentDto,
-  UpdateEquipmentDto,
-  PaginatedResponse,
-} from '../types.js';
-import type { QueryPagination } from '../schemas/equipment.schema.js';
+import type { CreateEquipmentDto, UpdateEquipmentDto } from '../schemas/equipment.schema.js';
+import type { IEquipment } from '../models/equipment.model.js';
 
-/**
- * Obtiene el listado paginado de equipos desde PostgreSQL
- */
-export async function findAll(
-  params: QueryPagination,
-): Promise<PaginatedResponse<EquipmentWithCategory>> {
-  const page = Math.max(1, params.page);
-  const limit = Math.max(1, params.limit);
-
-  return equipmentRepository.findAll(page, limit);
+export async function getAllEquipment(
+  page = 1,
+  limit = 10,
+): Promise<equipmentRepo.PaginatedResult<IEquipment>> {
+  const validPage = Math.max(1, page);
+  const validLimit = Math.max(1, Math.min(100, limit));
+  return await equipmentRepo.findAll(validPage, validLimit);
 }
 
-/**
- * Obtiene un equipo por su ID UUID o lanza AppError(404) si no existe
- */
-export async function findById(id: string): Promise<EquipmentWithCategory> {
-  const equipment = await equipmentRepository.findById(id);
+export async function getEquipmentById(id: string): Promise<IEquipment> {
+  const equipment = await equipmentRepo.findById(id);
   if (!equipment) {
-    throw new AppError(404, 'Recurso no encontrado');
+    throw new AppError(404, 'Equipo no encontrado');
   }
   return equipment;
 }
 
-/**
- * Crea un nuevo equipo aplicando reglas de negocio de dominio
- */
-export async function create(dto: CreateEquipmentDto): Promise<EquipmentWithCategory> {
-  if (dto.dailyRate <= 0) {
-    throw new AppError(400, 'La tarifa diaria debe ser mayor a 0');
+export async function createEquipment(dto: CreateEquipmentDto): Promise<IEquipment> {
+  const categoryExists = await categoryRepo.findById(dto.category);
+  if (!categoryExists) {
+    throw new AppError(400, 'La categoría referenciada no existe');
   }
 
-  return equipmentRepository.create(dto);
+  return await equipmentRepo.create(dto);
 }
 
-/**
- * Actualiza un equipo existente por ID UUID o lanza AppError(404) si no existe
- */
-export async function update(
+export async function updateEquipment(
   id: string,
   dto: UpdateEquipmentDto,
-): Promise<EquipmentWithCategory> {
-  if (dto.dailyRate !== undefined && dto.dailyRate <= 0) {
-    throw new AppError(400, 'La tarifa diaria debe ser mayor a 0');
+): Promise<IEquipment> {
+  if (dto.category) {
+    const categoryExists = await categoryRepo.findById(dto.category);
+    if (!categoryExists) {
+      throw new AppError(400, 'La categoría referenciada no existe');
+    }
   }
 
-  return equipmentRepository.update(id, dto);
+  const equipment = await equipmentRepo.update(id, dto);
+  if (!equipment) {
+    throw new AppError(404, 'Equipo no encontrado');
+  }
+  return equipment;
 }
 
-/**
- * Elimina un equipo por ID UUID o lanza AppError(404) si no existe
- */
-export async function remove(id: string): Promise<void> {
-  return equipmentRepository.remove(id);
+export async function deleteEquipment(id: string): Promise<void> {
+  const equipment = await equipmentRepo.remove(id);
+  if (!equipment) {
+    throw new AppError(404, 'Equipo no encontrado');
+  }
 }

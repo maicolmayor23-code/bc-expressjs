@@ -1,120 +1,91 @@
-import { Prisma } from '@prisma/client';
-import { prisma } from '../lib/prisma.js';
+import mongoose from 'mongoose';
+import { Equipment, type IEquipment } from '../models/equipment.model.js';
 import { AppError } from '../errors/AppError.js';
 import type { CreateEquipmentDto, UpdateEquipmentDto } from '../schemas/equipment.schema.js';
-import type { EquipmentWithCategory, PaginatedResponse } from '../types.js';
 
-/**
- * Maneja los errores conocidos de Prisma convirtiéndolos a AppError
- */
-function handlePrismaError(error: unknown): never {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2025') {
-      throw new AppError(404, 'Recurso no encontrado');
-    }
-    if (error.code === 'P2002') {
-      throw new AppError(409, 'Ya existe un registro con ese valor');
-    }
-  }
-  throw error;
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
-/**
- * Obtiene el listado paginado de equipos desde PostgreSQL usando skip y take
- */
+function handleMongoError(err: unknown): never {
+  if (err && typeof err === 'object') {
+    const errorObj = err as { name?: string; code?: number };
+    if (errorObj.name === 'CastError' || err instanceof mongoose.Error.CastError) {
+      throw new AppError(400, 'ID inválido');
+    }
+    if (errorObj.code === 11000) {
+      throw new AppError(409, 'Ya existe un equipo registrado con ese número de serie');
+    }
+  }
+  throw err;
+}
+
 export async function findAll(
   page: number,
   limit: number,
-): Promise<PaginatedResponse<EquipmentWithCategory>> {
+): Promise<PaginatedResult<IEquipment>> {
   const skip = (page - 1) * limit;
 
   try {
     const [data, total] = await Promise.all([
-      prisma.equipment.findMany({
-        skip,
-        take: limit,
-        include: {
-          category: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      }),
-      prisma.equipment.count(),
+      Equipment.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('category')
+        .lean<IEquipment[]>(),
+      Equipment.countDocuments(),
     ]);
 
     return {
       data,
       total,
       page,
-      limit,
+      totalPages: Math.ceil(total / limit),
     };
-  } catch (error) {
-    handlePrismaError(error);
+  } catch (err) {
+    handleMongoError(err);
   }
 }
 
-/**
- * Busca un equipo por su ID UUID incluyendo la relación con su Categoría
- */
-export async function findById(id: string): Promise<EquipmentWithCategory | null> {
+export async function findById(id: string): Promise<IEquipment | null> {
   try {
-    return await prisma.equipment.findUnique({
-      where: { id },
-      include: {
-        category: true,
-      },
-    });
-  } catch (error) {
-    handlePrismaError(error);
+    return await Equipment.findById(id).populate('category').lean<IEquipment>();
+  } catch (err) {
+    handleMongoError(err);
   }
 }
 
-/**
- * Crea un nuevo equipo en PostgreSQL con validaciones de clave foránea
- */
-export async function create(dto: CreateEquipmentDto): Promise<EquipmentWithCategory> {
+export async function create(dto: CreateEquipmentDto): Promise<IEquipment> {
   try {
-    return await prisma.equipment.create({
-      data: dto,
-      include: {
-        category: true,
-      },
-    });
-  } catch (error) {
-    handlePrismaError(error);
+    const equipment = await Equipment.create(dto);
+    const populated = await equipment.populate('category');
+    return populated.toObject() as IEquipment;
+  } catch (err) {
+    handleMongoError(err);
   }
 }
 
-/**
- * Actualiza los campos de un equipo existente por ID UUID
- */
-export async function update(
-  id: string,
-  dto: UpdateEquipmentDto,
-): Promise<EquipmentWithCategory> {
+export async function update(id: string, dto: UpdateEquipmentDto): Promise<IEquipment | null> {
   try {
-    return await prisma.equipment.update({
-      where: { id },
-      data: dto,
-      include: {
-        category: true,
-      },
-    });
-  } catch (error) {
-    handlePrismaError(error);
+    return await Equipment.findByIdAndUpdate(id, dto, {
+      new: true,
+      runValidators: true,
+    })
+      .populate('category')
+      .lean<IEquipment>();
+  } catch (err) {
+    handleMongoError(err);
   }
 }
 
-/**
- * Elimina un equipo por ID UUID en PostgreSQL
- */
-export async function remove(id: string): Promise<void> {
+export async function remove(id: string): Promise<IEquipment | null> {
   try {
-    await prisma.equipment.delete({
-      where: { id },
-    });
-  } catch (error) {
-    handlePrismaError(error);
+    return await Equipment.findByIdAndDelete(id).lean<IEquipment>();
+  } catch (err) {
+    handleMongoError(err);
   }
 }
