@@ -7,6 +7,7 @@ export interface IEquipment extends Document {
   dailyRate: number;
   isAvailable: boolean;
   category: Types.ObjectId;
+  createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,10 +46,14 @@ const equipmentSchema = new Schema<IEquipment>(
       ref: 'Category',
       required: [true, 'La categoría referenciada es requerida'],
     },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 export const Equipment = model<IEquipment>('Equipment', equipmentSchema);

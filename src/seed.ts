@@ -4,7 +4,9 @@ try {
   // Ignorar si el archivo .env no existe o ya está cargado
 }
 
+import bcrypt from 'bcrypt';
 import { connectDB, disconnectDB } from './lib/mongoose.js';
+import { User } from './models/user.model.js';
 import { Category } from './models/category.model.js';
 import { Equipment } from './models/equipment.model.js';
 import { logger } from './config/logger.js';
@@ -15,12 +17,35 @@ async function seed() {
   await connectDB();
 
   try {
-    // 1. Limpiar colecciones en el orden correcto (primero principal, luego secundaria)
+    // 1. Limpiar colecciones
     logger.info('🧹 Limpiando colecciones existentes...');
     await Equipment.deleteMany({});
     await Category.deleteMany({});
+    await User.deleteMany({});
 
-    // 2. Insertar Entidad Secundaria (Categorías de Equipos DJ / Sonido y Luces)
+    // 2. Crear Usuarios Demo con contraseñas hasheadas (bcrypt rounds 10)
+    logger.info('👤 Insertando usuarios demo...');
+    const defaultPasswordHash = await bcrypt.hash('Password123!', 10);
+
+    const users = await User.insertMany([
+      {
+        name: 'Admin DJ Pro',
+        email: 'admin@djsound.com',
+        password: defaultPasswordHash,
+        role: 'admin',
+      },
+      {
+        name: 'Técnico Sonido',
+        email: 'user@djsound.com',
+        password: defaultPasswordHash,
+        role: 'user',
+      },
+    ]);
+
+    logger.info(`✅ Se crearon ${users.length} usuarios demo (Pass: Password123!).`);
+    const [adminUser] = users;
+
+    // 3. Insertar Entidad Secundaria (Categorías)
     logger.info('🏷️ Insertando categorías secundarias...');
     const categories = await Category.insertMany([
       {
@@ -49,7 +74,7 @@ async function seed() {
 
     const [sonidoCat, ilumCat, djCat, efectosCat] = categories;
 
-    // 3. Insertar Entidad Principal (Equipos referenciando los ObjectIds de las Categorías)
+    // 4. Insertar Entidad Principal (Equipos referenciando Categorías y Usuarios)
     logger.info('🔊 Insertando equipos principales...');
     const equipments = await Equipment.insertMany([
       {
@@ -59,6 +84,7 @@ async function seed() {
         dailyRate: 150000,
         isAvailable: true,
         category: sonidoCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Subwoofer Activo Electro-Voice ELX200-18SP',
@@ -67,6 +93,7 @@ async function seed() {
         dailyRate: 220000,
         isAvailable: true,
         category: sonidoCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Sistema de Reproductor Pioneer DJ XDJ-XZ',
@@ -75,6 +102,7 @@ async function seed() {
         dailyRate: 450000,
         isAvailable: true,
         category: djCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Mezclador Pioneer DJM-900NXS2 4-Canales',
@@ -83,6 +111,7 @@ async function seed() {
         dailyRate: 300000,
         isAvailable: false,
         category: djCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Cabeza Móvil LED Chauvet DJ Intimidator Spot 360',
@@ -91,6 +120,7 @@ async function seed() {
         dailyRate: 120000,
         isAvailable: true,
         category: ilumCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Barra Par LED RGBW BeamZ LCB144',
@@ -99,6 +129,7 @@ async function seed() {
         dailyRate: 80000,
         isAvailable: true,
         category: ilumCat._id,
+        createdBy: adminUser._id,
       },
       {
         name: 'Máquina de Humo Bajo Chauvet Cumulus 1500W',
@@ -107,6 +138,7 @@ async function seed() {
         dailyRate: 180000,
         isAvailable: true,
         category: efectosCat._id,
+        createdBy: adminUser._id,
       },
     ]);
 

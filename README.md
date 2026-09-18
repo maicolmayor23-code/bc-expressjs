@@ -1,29 +1,38 @@
-# 🎧 Proyecto Semana 06 — API REST con MongoDB + Mongoose
+# 🎧 Proyecto Semana 07 — API REST con Autenticación JWT Completa y Cookies HttpOnly
 ## Dominio Asignado: DJ / Sonido y Luces
 
-API REST profesional desarrollada con **Express 5**, **TypeScript**, **MongoDB 7** y **Mongoose 9.4.1** para la **Semana 06** del Bootcamp. Implementa arquitectura en capas, relaciones por referencia con **`.populate()`**, validación con **Zod**, manejo estructurado de errores nativos de MongoDB (`CastError`, `11000`), paginación en lecturas optimizada con **`.lean()`**, y script de sembrado de datos demo (**`seed`**).
+API REST profesional desarrollada con **Express 5**, **TypeScript**, **MongoDB 7**, **Mongoose 9.4.1**, **bcrypt 6**, **jsonwebtoken 9** y **Zod 4**.
+
+Esta versión implementa la arquitectura completa de **Autenticación y Autorización de la Semana 07**:
+- Hashing seguro de contraseñas con `bcrypt` (10 salt rounds).
+- Autenticación mediante tokens JWT (Access Token de 15 min y Refresh Token de 7 días).
+- Transmisión exclusiva de tokens en cookies **`HttpOnly`** con `secure` y `sameSite: lax`.
+- Rotación automática de Refresh Tokens en el endpoint `/refresh`.
+- Almacenamiento únicamente del hash del Refresh Token en la base de datos (`refreshTokenHash` con `select: false`).
+- Protección global de todas las rutas del recurso principal **`Equipment`** mediante `authMiddleware`.
+- Prevención de ataques de enumeración de usuarios en el proceso de login.
 
 ---
 
 ## 📌 1. Información del Dominio y Entidades
 
 * **Dominio Asignado:** DJ / Sonido y Luces
-* **Entidad Secundaria (Sin referencias):** `Category` (`/api/v1/categories`)
-  - Representa las categorías de equipos (ej. *Sonido & Altavoces*, *Iluminación & Láseres*, *Controladores DJ & Mixers*, *Efectos Especiales & Humo*).
-* **Entidad Principal (Con referencia a Secundaria):** `Equipment` (`/api/v1/equipment` y alias `/api/v1/items`)
-  - Representa los equipos de sonido y luces disponibles para alquiler.
-  - Guarda una referencia mediante `Schema.Types.ObjectId` (con `ref: 'Category'`) hacia la categoría correspondiente.
+* **Entidad de Usuario (`User`):** Registra credenciales de acceso (`name`, `email`, `password`, `role`, `refreshTokenHash`).
+* **Entidad Secundaria (`Category`):** Categorías de equipos (*Sonido & Altavoces*, *Iluminación & Láseres*, *Controladores DJ & Mixers*, *Efectos Especiales & Humo*).
+* **Entidad Principal Protegida (`Equipment`):** Equipos de sonido y luces disponibles para alquiler, referenciando a `Category` y al usuario creador (`createdBy`).
 
 ---
 
-## 📐 2. Modelo de Datos y Esquemas Mongoose
+## 📐 2. Modelo de Datos Mongoose
 
-### Categoría (`Category`)
+### Usuario (`User`)
 ```ts
-const categorySchema = new Schema<ICategory>({
-  name: { type: String, required: true, unique: true, trim: true, maxlength: 100 },
-  description: { type: String, trim: true, maxlength: 500 },
-  active: { type: Boolean, default: true }
+const userSchema = new Schema<IUser>({
+  name: { type: String, required: true, trim: true, maxlength: 100 },
+  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  password: { type: String, required: true, select: false }, // Oculto por defecto
+  role: { type: String, enum: ['admin', 'user'], default: 'user' },
+  refreshTokenHash: { type: String, default: null, select: false } // Hash en DB
 }, { timestamps: true });
 ```
 
@@ -35,7 +44,8 @@ const equipmentSchema = new Schema<IEquipment>({
   brand: { type: String, required: true, trim: true },
   dailyRate: { type: Number, required: true, min: 0 },
   isAvailable: { type: Boolean, default: true },
-  category: { type: Schema.Types.ObjectId, ref: 'Category', required: true }
+  category: { type: Schema.Types.ObjectId, ref: 'Category', required: true },
+  createdBy: { type: Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 ```
 
@@ -65,7 +75,7 @@ const equipmentSchema = new Schema<IEquipment>({
    cp .env.example .env
    ```
 
-4. **Ejecutar Seed de datos iniciales**:
+4. **Ejecutar Seed de usuarios y datos demo**:
    ```bash
    pnpm seed
    ```
@@ -78,50 +88,46 @@ const equipmentSchema = new Schema<IEquipment>({
 
 ---
 
-## 📜 4. Logs de Ejecución del Seed (`pnpm seed`)
+## 🔑 4. Credenciales de Prueba (Generadas en `pnpm seed`)
 
-```text
-🌱 Iniciando proceso de seeding para DJ / Sonido y Luces...
-🍃 Connected to MongoDB successfully
-🧹 Limpiando colecciones existentes...
-🏷️ Insertando categorías secundarias...
-✅ Se crearon 4 categorías.
-🔊 Insertando equipos principales...
-✅ Se crearon 7 equipos con sus referencias asociadas.
-🎉 Proceso de seed completado exitosamente.
-🍃 Disconnected from MongoDB
-```
+| Rol | Email | Contraseña |
+| :--- | :--- | :--- |
+| **Admin** | `admin@djsound.com` | `Password123!` |
+| **Usuario** | `user@djsound.com` | `Password123!` |
 
 ---
 
 ## 🌐 5. Endpoints de la API REST
 
-### Entidad Secundaria: `/api/v1/categories`
+### 🔑 Autenticación: `/api/v1/auth`
 
-| Método | Ruta | Descripción | Estado HTTP |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/categories` | Obtener todas las categorías (con `.lean()`) | `200 OK` |
-| `GET` | `/api/v1/categories/:id` | Obtener categoría por ObjectId | `200 OK` / `404 Not Found` / `400 Bad Request` |
-| `POST` | `/api/v1/categories` | Crear categoría (validación Zod) | `201 Created` / `400` / `409` |
-| `PUT` | `/api/v1/categories/:id` | Actualizar categoría parcial/total | `200 OK` / `400` / `404` / `409` |
-| `DELETE` | `/api/v1/categories/:id` | Eliminar categoría por ObjectId | `204 No Content` / `404` / `400` |
+| Método | Ruta | Descripción | Protección | Estado HTTP |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/register` | Registro de nuevo usuario (password hasheado) | Pública | `201 Created` |
+| `POST` | `/api/v1/auth/login` | Login con credenciales -> Emite cookies HttpOnly | Pública | `200 OK` / `401` |
+| `GET` | `/api/v1/auth/me` | Obtener perfil del usuario autenticado | `authMiddleware` | `200 OK` / `401` |
+| `POST` | `/api/v1/auth/refresh` | Renueva Access Token usando Refresh Token (con rotación) | Cookie `refreshToken` | `200 OK` / `401` |
+| `POST` | `/api/v1/auth/logout` | Invalida Refresh Token en BD y borra las cookies | Pública/Autenticada | `200 OK` |
 
-### Entidad Principal: `/api/v1/equipment` (Alias compatibilidad: `/api/v1/items`)
+### 🔊 Recurso Principal Protegido: `/api/v1/equipment` (Alias: `/api/v1/items`)
 
-| Método | Ruta | Descripción | Estado HTTP |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/equipment?page=1&limit=10` | Obtener equipos paginados con `.lean()` y `.populate('category')` | `200 OK` |
-| `GET` | `/api/v1/equipment/:id` | Obtener equipo por ObjectId con `.populate('category')` | `200 OK` / `404 Not Found` / `400 Bad Request` |
-| `POST` | `/api/v1/equipment` | Crear equipo (valida Regex ObjectId 24-hex de categoría) | `201 Created` / `400` / `409` |
-| `PUT` | `/api/v1/equipment/:id` | Actualizar equipo | `200 OK` / `400` / `404` / `409` |
-| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo por ObjectId | `204 No Content` / `404` / `400` |
+> 🔒 **Todas las rutas CRUD del recurso principal requieren autenticación mediante la cookie `accessToken`.**
+
+| Método | Ruta | Descripción | Protección | Estado HTTP |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/equipment?page=1&limit=10` | Obtener lista de equipos paginados | `authMiddleware` | `200 OK` / `401` |
+| `GET` | `/api/v1/equipment/:id` | Obtener un equipo por ID con `.populate()` | `authMiddleware` | `200 OK` / `404` / `401` |
+| `POST` | `/api/v1/equipment` | Crear nuevo equipo (asigna `createdBy`) | `authMiddleware` | `201 Created` / `400` / `401` |
+| `PUT/PATCH`| `/api/v1/equipment/:id` | Actualizar parcialmente/totalmente un equipo | `authMiddleware` | `200 OK` / `400` / `404` / `401` |
+| `DELETE` | `/api/v1/equipment/:id` | Eliminar un equipo por ObjectId | `authMiddleware` | `204 No Content` / `404` / `401` |
 
 ---
 
-## 💥 6. Manejo de Errores Nativos de MongoDB y Mongoose
+## 🔒 6. Medidas de Seguridad Implementadas
 
-| Error Nativo | Causa | Mapeo HTTP | Respuesta JSON |
-| :--- | :--- | :--- | :--- |
-| **`mongoose.Error.CastError`** | Formato de ObjectId inválido (ej. `"abc123"`). | `400 Bad Request` | `{ "error": "Application Error", "message": "ID inválido" }` |
-| **`MongoServerError (11000)`** | Violación de índice único (`unique: true`), ej. `serialNumber` o `name` duplicado. | `409 Conflict` | `{ "error": "Application Error", "message": "Ya existe un registro con ese valor" }` |
-| **`null` en lectura/escritura** | Documento no encontrado al consultar por ObjectId válido. | `404 Not Found` | `{ "error": "Application Error", "message": "Equipo no encontrado" }` |
+1. **Passwords no expuestas:** El atributo `{ select: false }` en Mongoose impide el retorno de hashes de contraseñas.
+2. **Protección contra User Enumeration:** `/login` retorna exactamente el mismo error de credenciales inválidas para email no encontrado y password incorrecto.
+3. **Secretos Independientes:** `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` son totalmente independientes en `.env`.
+4. **Protección XSS con Cookies HttpOnly:** Se desaconseja e impide guardar tokens en `localStorage`. Las cookies cuentan con los atributos `httpOnly`, `secure` (en producción) y `sameSite: 'lax'`.
+5. **Rotación de Refresh Tokens:** Cada invocación a `/refresh` genera un nuevo par de tokens e invalida el anterior en la BD.
+6. **Cuestionario Teórico:** Se incluye el archivo `CUESTIONARIO_TEORICO.md` respondiendo a los 10 temas evaluativos de la rúbrica.

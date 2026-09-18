@@ -36,6 +36,7 @@ export async function findAll(
         .skip(skip)
         .limit(limit)
         .populate('category')
+        .populate('createdBy', 'name email role')
         .lean<IEquipment[]>(),
       Equipment.countDocuments(),
     ]);
@@ -53,16 +54,23 @@ export async function findAll(
 
 export async function findById(id: string): Promise<IEquipment | null> {
   try {
-    return await Equipment.findById(id).populate('category').lean<IEquipment>();
+    return await Equipment.findById(id)
+      .populate('category')
+      .populate('createdBy', 'name email role')
+      .lean<IEquipment>();
   } catch (err) {
     handleMongoError(err);
   }
 }
 
-export async function create(dto: CreateEquipmentDto): Promise<IEquipment> {
+export async function create(dto: CreateEquipmentDto, userId?: string): Promise<IEquipment> {
   try {
-    const equipment = await Equipment.create(dto);
-    const populated = await equipment.populate('category');
+    const equipmentData = userId ? { ...dto, createdBy: userId } : dto;
+    const equipment = await Equipment.create(equipmentData);
+    const populated = await equipment.populate([
+      { path: 'category' },
+      { path: 'createdBy', select: 'name email role' },
+    ]);
     return populated.toObject() as IEquipment;
   } catch (err) {
     handleMongoError(err);
@@ -76,6 +84,7 @@ export async function update(id: string, dto: UpdateEquipmentDto): Promise<IEqui
       runValidators: true,
     })
       .populate('category')
+      .populate('createdBy', 'name email role')
       .lean<IEquipment>();
   } catch (err) {
     handleMongoError(err);

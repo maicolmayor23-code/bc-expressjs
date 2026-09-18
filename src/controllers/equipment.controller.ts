@@ -25,7 +25,8 @@ export async function getById(req: Request, res: Response, next: NextFunction): 
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const dto = createEquipmentSchema.parse(req.body);
-    const equipment = await equipmentService.createEquipment(dto);
+    const userId = req.user?.sub;
+    const equipment = await equipmentService.createEquipment(dto, userId);
     res.status(201).json(equipment);
   } catch (err) {
     next(err);

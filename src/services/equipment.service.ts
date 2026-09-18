@@ -21,13 +21,13 @@ export async function getEquipmentById(id: string): Promise<IEquipment> {
   return equipment;
 }
 
-export async function createEquipment(dto: CreateEquipmentDto): Promise<IEquipment> {
+export async function createEquipment(dto: CreateEquipmentDto, userId?: string): Promise<IEquipment> {
   const categoryExists = await categoryRepo.findById(dto.category);
   if (!categoryExists) {
     throw new AppError(400, 'La categoría referenciada no existe');
   }
 
-  return await equipmentRepo.create(dto);
+  return await equipmentRepo.create(dto, userId);
 }
 
 export async function updateEquipment(
