@@ -22,7 +22,6 @@ export function createApp(): Application {
 
   // 2. Control de acceso de orígenes cruzados (CORS) con Whitelist
   app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions));
 
   // 3. Limitador global de peticiones (100 peticiones / 15 min por IP)
   app.use(globalLimiter);
@@ -32,7 +31,11 @@ export function createApp(): Application {
   app.use(cookieParser());
 
   // 5. Sanitización contra ataques de NoSQL Injection (elimina $ y .)
-  app.use(mongoSanitize());
+  app.use((req, _res, next) => {
+    if (req.body) mongoSanitize.sanitize(req.body);
+    if (req.params) mongoSanitize.sanitize(req.params);
+    next();
+  });
 
   // 6. Logging de peticiones HTTP con Morgan / Winston
   app.use(morganMiddleware);

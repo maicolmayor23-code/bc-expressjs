@@ -40,6 +40,7 @@ export const corsOptions: cors.CorsOptions = {
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   limit: 100, // Límite de 100 peticiones
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: 'draft-7', // Cabeceras modernas RateLimit-*
   legacyHeaders: true, // Habilitar cabeceras legadas X-RateLimit-* (requerido para Postman / rúbrica)
   message: {
@@ -51,6 +52,7 @@ export const globalLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   limit: 5, // Máximo 5 peticiones (mitigación de fuerza bruta en /login y /register)
+  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: 'draft-7',
   legacyHeaders: true, // Habilitar cabeceras legadas X-RateLimit-* (requerido para Postman / rúbrica)
   message: {

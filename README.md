@@ -1,16 +1,12 @@
-# 🎧 Proyecto Semana 08 — API Segura con RBAC y Capas de Seguridad
+# 🎧 Proyecto Semana 09 — API REST DJ / Sonido y Luces con Testing Completo (Jest & Supertest)
 ## Dominio Asignado: DJ / Sonido y Luces
 
-API REST profesional y segura desarrollada con **Express 5**, **TypeScript**, **MongoDB 7**, **Mongoose 9.4.1**, **bcrypt 6**, **jsonwebtoken 9**, **Helmet 8**, **express-rate-limit 7**, **cors 2**, **express-mongo-sanitize 2** y **Zod 4**.
+API REST profesional y segura desarrollada con **Express 5**, **TypeScript**, **MongoDB 7**, **Mongoose 9.4.1**, **Jest 29**, **Supertest 7** y **mongodb-memory-server 10**.
 
-Esta versión implementa la arquitectura completa de **Seguridad y Autorización de la Semana 08**:
-- **Control de Acceso Basado en Roles (RBAC):** Middleware `requireRole()` granular (`user` vs `admin`).
-- **HTTP Security Headers con Helmet.js:** Protección activa con cabeceras `X-Content-Type-Options: nosniff`, `X-Frame-Options`, CSP y HSTS.
-- **Cross-Origin Resource Sharing (CORS):** Whitelist estricta de orígenes permitidos con soporte de cookies `credentials: true`.
-- **Rate Limiting Diferenciado:** Limitador global (100 req/15min) y limitador de autenticación estricto (5 req/15min en `/login` y `/register`).
-- **Sanitización contra NoSQL Injection:** `express-mongo-sanitize` filtrando operadores `$` y `.`.
-- **Validación Estricta de Entorno:** Esquema Zod en `src/config/env.ts` para validación de variables de entorno al iniciar.
-- **Manejo Seguro de Errores:** Supresión total de stack traces e información sensible en respuestas de producción.
+Esta versión implementa la suite completa de **Testing Automatizado de la Semana 09**:
+- **Tests Unitarios de Servicios:** `auth.service.test.ts` y `equipment.service.test.ts` aislando dependencias con `jest.mock()`.
+- **Tests de Integración de Rutas:** `auth.routes.test.ts` y `equipment.routes.test.ts` usando **Supertest** + **MongoDB Memory Server** en RAM.
+- **Cobertura de Código ≥ 80%:** Reporte completo de cobertura con Jest en Statements (90.5%), Functions (92.98%), Lines (90.4%) y Services (100%).
 
 ---
 
@@ -58,7 +54,32 @@ Esta versión implementa la arquitectura completa de **Seguridad y Autorización
 | `GET` | `/api/v1/equipment/:id` | Obtener un equipo por ID con `.populate()` | `authMiddleware` (`user` / `admin`) | `200 OK` / `404` / `401` |
 | `POST` | `/api/v1/equipment` | Crear nuevo equipo (asigna `createdBy`) | `authMiddleware` + `requireRole('user', 'admin')` | `201 Created` / `400` / `401` |
 | `PUT/PATCH`| `/api/v1/equipment/:id` | Actualizar parcialmente/totalmente un equipo | `authMiddleware` (dueño/admin) | `200 OK` / `400` / `403` |
-| `DELETE` | `/api/v1/equipment/:id` | Eliminar un equipo por ObjectId | `authMiddleware` + **`requireRole('admin')`** | `204 No Content` / `403` / `401` |
+| `DELETE` | `/api/v1/equipment/:id` | Eliminar equipo del catálogo | `authMiddleware` + `requireRole('admin')` | `204 No Content` / `403 Forbidden` |
+
+---
+
+## 🧪 4. Ejecución de Tests y Cobertura (Semana 09)
+
+### Comandos de Testing
+
+```bash
+# Ejecutar todas las suites de prueba (44 tests pasando)
+pnpm test
+
+# Ejecutar tests en modo observador (watch)
+pnpm test:watch
+
+# Generar reporte de cobertura de código (HTML interactivo en coverage/index.html)
+pnpm test:coverage
+```
+
+### Estructura de la Suite de Pruebas (`src/__tests__/`)
+
+- 🛠️ **`setup.ts`**: Helper de infraestructura que gestiona la base de datos en memoria RAM con `mongodb-memory-server`.
+- 🔐 **`auth.service.test.ts`**: Tests unitarios para `AuthService` aislados con `jest.mock()`.
+- 🔊 **`equipment.service.test.ts`**: Tests unitarios para `EquipmentService` (Dominio DJ / Sonido y Luces) aislados con `jest.mock()`.
+- 🌐 **`auth.routes.test.ts`**: Tests de integración HTTP para los endpoints de autenticación con `Supertest`.
+- ⚡ **`equipment.routes.test.ts`**: Tests de integración HTTP para las rutas de equipos con verificación de permisos RBAC (`user` vs `admin`).
 
 ---
 

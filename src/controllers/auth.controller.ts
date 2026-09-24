@@ -30,6 +30,8 @@ export async function loginController(req: Request, res: Response, next: NextFun
       message: 'Inicio de sesión exitoso',
       data: {
         user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   } catch (err) {

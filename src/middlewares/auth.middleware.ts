@@ -4,8 +4,15 @@ import { verifyAccessToken } from '../utils/jwt.js';
 import { AppError } from '../errors/AppError.js';
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // 1. Leer el token de la cookie HttpOnly
-  const token = req.cookies?.accessToken as string | undefined;
+  // 1. Leer el token de la cabecera Authorization (Bearer) o cookie HttpOnly
+  let token: string | undefined;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.cookies?.accessToken) {
+    token = req.cookies.accessToken;
+  }
 
   // 2. Si no hay token, el usuario no está autenticado
   if (!token) {
