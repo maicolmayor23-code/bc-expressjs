@@ -9,6 +9,7 @@ import { helmetOptions, corsOptions, globalLimiter } from './config/security.js'
 import { authRouter } from './routes/auth.routes.js';
 import { categoryRouter } from './routes/category.routes.js';
 import { equipmentRouter } from './routes/equipment.routes.js';
+import { exerciseRouter } from './routes/exercise.routes.js';
 import { morganMiddleware } from './config/logger.js';
 import { notFoundHandler } from './middlewares/notFound.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -49,6 +50,11 @@ export function createApp(): Application {
       },
       endpoints: {
         health: '/health',
+        exercises: {
+          public: 'GET /public (o /api/v1/public) — Sin auth',
+          dashboard: 'GET /dashboard (o /api/v1/dashboard) — User & Admin',
+          adminUsers: 'GET /admin/users (o /api/v1/admin/users) — Admin only (403 para user)',
+        },
         auth: {
           register: 'POST /api/v1/auth/register (Rate Limited: 5/15m)',
           login: 'POST /api/v1/auth/login (Rate Limited: 5/15m)',
@@ -77,6 +83,8 @@ export function createApp(): Application {
   });
 
   // 8. Montar routers
+  app.use('/', exerciseRouter);
+  app.use('/api/v1', exerciseRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/categories', categoryRouter);
   app.use('/api/v1/equipment', equipmentRouter);

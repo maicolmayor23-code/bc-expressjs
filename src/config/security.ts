@@ -41,7 +41,7 @@ export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   limit: 100, // Límite de 100 peticiones
   standardHeaders: 'draft-7', // Cabeceras modernas RateLimit-*
-  legacyHeaders: false, // Desactivar X-RateLimit-* legados
+  legacyHeaders: true, // Habilitar cabeceras legadas X-RateLimit-* (requerido para Postman / rúbrica)
   message: {
     error: 'Demasiadas peticiones desde esta IP, intente de nuevo en 15 minutos',
   },
@@ -52,7 +52,7 @@ export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   limit: 5, // Máximo 5 peticiones (mitigación de fuerza bruta en /login y /register)
   standardHeaders: 'draft-7',
-  legacyHeaders: false,
+  legacyHeaders: true, // Habilitar cabeceras legadas X-RateLimit-* (requerido para Postman / rúbrica)
   message: {
     error: 'Demasiados intentos de autenticación, intente de nuevo en 15 minutos',
   },
